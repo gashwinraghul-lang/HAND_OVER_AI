@@ -1,0 +1,30 @@
+Final Summary - HandOver.AI
+What works
+- Authentication & Security: Signup/login/logout, BCrypt passwords (12+ chars), session-based auth with HttpOnly/SameSite cookies, CSRF protection, rate limiting & account lockout, simulated email verification.
+- Face Login (2FA): Password + face authentication, explicit consent, blink-based liveness, AES-GCM encrypted embeddings (never stored as photos), face deletion, seeded demo faces for camera-free testing. Admin accounts require password + face + verified email.
+- RBAC & Permissions: Role-based access (Admin, Manager, Outgoing, Incoming) with server-side project access checks. Incoming employees are restricted to only the approved handover report and 30/60/90 onboarding plan.
+- Dashboard & Projects: Seeded "VPS Infrastructure Renewal" project (78% readiness), project list, readiness chart (Chart.js), AI findings, and navigation.
+- Documents: Upload PDF/DOCX/TXT with parsing and chunking for RAG context.
+- Connections: Add GitHub/Trello/Google Drive connectors, AES-GCM encrypted keys (only last 4 chars displayed), test/rotate/revoke/sync functionality.
+- Project Chatbot: Scoped to project data with citations, correctly responds with exactly its irrelevant to off-topic questions, flags missing evidence.
+- Reports & Handover: Generate reports (pending manager approval), manager/admin approve/reject, downloadable PDF via OpenPDF, incoming view with onboarding plans and access inventory.
+- UI/UX: Bootstrap 5 dark/light theme, Three.js animated background with reduced-motion support and pause toggle, responsive design.
+- Tests: All 16 unit tests passing (permissions, readiness calculation, its irrelevant rule, API key masking, encryption round-trip).
+What is mocked
+- Demo Data: Auto-seeded users, project, documents, tasks, risks, gaps, decisions, connections, and synthetic face profiles on first run.
+- AI Service: MockAIService provides deterministic answers with citations, conflict detection, and missing evidence flags (default mode).
+- Connectors: GitHub/Trello/Google Drive return seeded/simulated data rather than making live API calls.
+- Email Verification: Simulated via console logs and auto-verified for demo signups.
+- Face Profiles: Synthetic all-zero descriptors for camera-free demo login.
+What needs real keys
+- Live AI: Set MOCK_AI_MODE=false with LLM_API_KEY, LLM_API_ENDPOINT, and LLM_MODEL for OpenAI-compatible providers.
+- Real Connectors: Valid API tokens for GitHub, Trello/Jira, or Google Drive to sync live data (infrastructure exists, HTTP calls not fully implemented).
+- Production Security: Replace default APP_ENCRYPTION_KEY with a secure 32-byte key, configure proper DB credentials for MySQL, enable HTTPS for face login in production.
+- Email (Optional): SMTP configuration if real email verification is desired.
+What is not built yet
+- Live Connector APIs: Full HTTP integrations for GitHub/Trello/Google Drive (interface exists, using simulated sync).
+- Scheduled Sync: Only manual "Sync now" implemented; no cron/background scheduler.
+- Real Email Delivery: Console-simulated only.
+- Advanced Biometric Security: Production-grade liveness/fraud detection (demo-level blink check only).
+- Extended Features: Slack/email connectors, full version history UI for AI corrections, advanced analytics dashboard (P2 items per requirements).
+Access: http://localhost:8080 | Default DB: H2 (./data/handover_ai.mv.db) | Tests: .\mvnw.cmd test | All requirements from prompt.md have been implemented for a demo-ready build.

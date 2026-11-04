@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections - HandOver.AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg ho-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">HandOver<span>.AI</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-grid me-1"></i>Dashboard</a></li>
+                    <li class="nav-item ms-lg-3"><a class="nav-link" href="profile.html"><i class="bi bi-person-gear me-1"></i>Profile</a></li>
+                    <li class="nav-item ms-lg-3"><button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" aria-label="Toggle theme"><i id="themeIcon" class="bi bi-sun-fill"></i></button></li>
+                    <li class="nav-item ms-lg-3"><span id="navUserName" class="text-white"></span> <span id="navUserRole"></span></li>
+                    <li class="nav-item ms-lg-3"><button class="btn btn-sm btn-outline-teal" onclick="logout()">Logout</button></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="mb-4">
+            <a href="dashboard.html" class="text-muted"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mt-2">
+                <div>
+                    <h2 class="mb-1">API Connections</h2>
+                    <p class="text-muted mb-0">Connect work tools with read-only keys. Keys are encrypted at rest with AES-GCM.</p>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <label for="projectSelect" class="form-label mb-0 small text-muted">Project</label>
+                    <select id="projectSelect" class="form-select form-select-sm" style="min-width:240px;" onchange="onProjectChange()"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
+            <i class="bi bi-shield-lock fs-5"></i>
+            <div>
+                API keys are validated, encrypted before storage, and never returned in full. Only the last four characters are shown.
+                All connectors run in demo mode and import clearly labelled sample work items.
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="glass-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0"><i class="bi bi-plug me-2"></i>Connected services</h5>
+                            <span class="badge badge-teal" id="connectionCount">0</span>
+                        </div>
+                        <div id="connectionList" class="d-grid gap-3">
+                            <p class="small text-muted mb-0">Loading connections…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="glass-card mb-4">
+                    <div class="card-body">
+                        <h5 class="mb-3"><i class="bi bi-plus-circle me-2"></i>Add a connection</h5>
+                        <label for="serviceSelect" class="form-label">Service</label>
+                        <select id="serviceSelect" class="form-select mb-3">
+                            <option value="GITHUB">GitHub — repositories, issues, PRs</option>
+                            <option value="TRELLO">Trello — boards, cards, assignees</option>
+                            <option value="GDRIVE">Google Drive — documents</option>
+                        </select>
+                        <label for="apiKeyInput" class="form-label">Read-only API key</label>
+                        <input type="password" id="apiKeyInput" class="form-control mb-1" placeholder="Paste token or key" autocomplete="off">
+                        <div class="form-text mb-3">Demo mode accepts any non-empty key.</div>
+                        <label for="scopesInput" class="form-label">Requested scopes</label>
+                        <input type="text" id="scopesInput" class="form-control mb-3" value="repo:read, issues:read" placeholder="repo:read, issues:read">
+                        <button class="btn btn-teal w-100" id="saveConnectionBtn" onclick="saveConnection()">
+                            <i class="bi bi-lock me-1"></i> Save encrypted
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-body">
+                        <h5 class="mb-2"><i class="bi bi-arrow-repeat me-2"></i>Sync project</h5>
+                        <p class="small text-muted">Pull tasks and issues from every connected service, then re-run the AI analysis.</p>
+                        <button class="btn btn-outline-teal w-100" id="syncBtn" onclick="syncProject()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Sync now
+                        </button>
+                        <div id="syncResult" class="small text-muted mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let projects = [];
+        let projectId = null;
+
+        const serviceMeta = {
+            GITHUB: { icon: 'bi-github', label: 'GitHub', hint: 'Repos, commits, PRs, issues' },
+            TRELLO: { icon: 'bi-kanban', label: 'Trello', hint: 'Boards, tasks, status, assignees' },
+            GDRIVE: { icon: 'bi-google', label: 'Google Drive', hint: 'Documents for ingestion' }
+        };
+
+        async function loadConnectionsPage() {
+            currentUser = await checkAuth();
+            if (!currentUser) return;
+            renderUserNav();
+
+            projects = await api('/api/projects');
+            const select = document.getElementById('projectSelect');
+            if (!projects.length) {
+                document.getElementById('connectionList').innerHTML =
+                    '<p class="small text-muted mb-0">No projects available. Create one from the dashboard first.</p>';
+                select.innerHTML = '<option>No projects</option>';
+                document.getElementById('saveConnectionBtn').disabled = true;
+                document.getElementById('syncBtn').disabled = true;
+                return;
+            }
+
+            const requested = getProjectId();
+            projectId = projects.some(p => String(p.id) === String(requested)) ? Number(requested) : projects[0].id;
+            select.innerHTML = projects.map(p =>
+                `<option value="${p.id}" ${p.id === projectId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
+            ).join('');
+
+            await loadConnections();
+        }
+
+        async function onProjectChange() {
+            projectId = Number(document.getElementById('projectSelect').value);
+            document.getElementById('syncResult').innerHTML = '';
+            await loadConnections();
+        }
+
+        async function loadConnections() {
+            const el = document.getElementById('connectionList');
+            el.innerHTML = '<p class="small text-muted mb-0">Loading connections…</p>';
+            try {
+                const connections = await api(`/api/projects/${projectId}/connections`);
+                document.getElementById('connectionCount').textContent = connections.length;
+                if (!connections.length) {
+                    el.innerHTML = '<p class="small text-muted mb-0">No connections yet. Add one on the right to import real work context.</p>';
+                    return;
+                }
+                el.innerHTML = connections.map(c => {
+                    const meta = serviceMeta[c.service] || { icon: 'bi-plug', label: c.service, hint: 'Connected service' };
+                    const cls = c.status === 'CONNECTED' ? 'badge-approved'
+                        : c.status === 'ERROR' ? 'badge-overdue' : 'badge-pending';
+                    return `<div class="glass-card-sm p-3">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="d-flex gap-3">
+                                <i class="bi ${meta.icon} fs-3 text-brand"></i>
+                                <div>
+                                    <h6 class="mb-0">${escapeHtml(meta.label)}</h6>
+                                    <small class="text-muted">${escapeHtml(meta.hint)}</small>
+                                </div>
+                            </div>
+                            <span class="badge ${cls}">${escapeHtml(c.status || 'PENDING')}</span>
+                        </div>
+                        <div class="small text-muted mt-2">
+                            Stored as <code>…${escapeHtml(c.keyLast4 || '****')}</code>
+                            ${c.requestedScopes ? ` · Scopes: ${escapeHtml(c.requestedScopes)}` : ''}
+                            <br>Last synced: ${c.lastSyncedAt ? formatDateTime(c.lastSyncedAt) : 'never'}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <button class="btn btn-sm btn-outline-teal" onclick="testConnection(${c.id})">
+                                <i class="bi bi-check2-circle"></i> Test
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="rotateKey(${c.id}, '${escapeHtml(c.service)}')">
+                                <i class="bi bi-arrow-repeat"></i> Rotate
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="revokeConnection(${c.id}, '${escapeHtml(c.service)}')">
+                                <i class="bi bi-trash"></i> Revoke
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                el.innerHTML = `<p class="small text-muted mb-0">Could not load connections: ${escapeHtml(errorText(e))}</p>`;
+            }
+        }
+
+        async function saveConnection() {
+            const service = document.getElementById('serviceSelect').value;
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const requestedScopes = document.getElementById('scopesInput').value.trim();
+            if (!apiKey) { showToast('Enter an API key first.', 'warning'); return; }
+
+            const btn = document.getElementById('saveConnectionBtn');
+            btn.disabled = true;
+            try {
+                await api(`/api/projects/${projectId}/connections`, {
+                    method: 'POST',
+                    body: { service, apiKey, requestedScopes }
+                });
+                document.getElementById('apiKeyInput').value = '';
+                showToast(`${service} connected and key encrypted`, 'success');
+                await loadConnections();
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function testConnection(connId) {
+            try {
+                const res = await api(`/api/projects/${projectId}/connections/${connId}/test`, { method: 'POST' });
+                showToast(res.message || 'Connection tested', res.ok ? 'success' : 'error');
+                await loadConnections();
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            }
+        }
+
+        async function rotateKey(connId, service) {
+            const key = prompt(`Paste the new ${service} API key. The old key will be replaced.`);
+            if (!key) return;
+            try {
+                await api(`/api/projects/${projectId}/connections/${connId}/rotate`, {
+                    method: 'POST', body: { apiKey: key }
+                });
+                showToast('API key rotated and re-encrypted', 'success');
+                await loadConnections();
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            }
+        }
+
+        async function revokeConnection(connId, service) {
+            if (!confirm(`Revoke the ${service} connection? Imported items stay, but syncing stops.`)) return;
+            try {
+                await api(`/api/projects/${projectId}/connections/${connId}`, { method: 'DELETE' });
+                showToast(`${service} connection revoked`, 'warning');
+                await loadConnections();
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            }
+        }
+
+        async function syncProject() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            document.getElementById('syncResult').textContent = 'Syncing connected services…';
+            try {
+                const res = await api(`/api/projects/${projectId}/connections/sync`, { method: 'POST' });
+                const analysis = res.analysis || {};
+                document.getElementById('syncResult').innerHTML =
+                    `<span class="text-success"><i class="bi bi-check2-circle"></i> Imported ${res.itemsSynced ?? 0} work items.</span>` +
+                    (analysis.executiveSummary ? `<br>${escapeHtml(analysis.executiveSummary)}` : '');
+                showToast('Sync complete — AI analysis updated', 'success');
+                await loadConnections();
+            } catch (e) {
+                document.getElementById('syncResult').textContent = errorText(e);
+                showToast(errorText(e), 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        initTheme();
+        loadConnectionsPage().catch(e => showToast(errorText(e), 'error'));
+    </script>
+</body>
+</html>

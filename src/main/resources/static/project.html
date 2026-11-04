@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project - HandOver.AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg ho-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">HandOver<span>.AI</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><span id="aiModeBadge" class="ai-mode-badge"><i class="bi bi-cpu"></i> SIMULATED AI</span></li>
+                    <li class="nav-item ms-lg-3"><a class="nav-link" href="connections.html"><i class="bi bi-plug me-1"></i>Connections</a></li>
+                    <li class="nav-item ms-lg-3"><a class="nav-link" href="profile.html"><i class="bi bi-person-gear me-1"></i>Profile</a></li>
+                    <li class="nav-item ms-lg-3"><button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" aria-label="Toggle theme"><i id="themeIcon" class="bi bi-sun-fill"></i></button></li>
+                    <li class="nav-item ms-lg-3"><span id="navUserName" class="text-white"></span> <span id="navUserRole"></span></li>
+                    <li class="nav-item ms-lg-3"><button class="btn btn-sm btn-outline-teal" onclick="logout()">Logout</button></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-lg-4">
+        <div class="mb-4">
+            <a href="dashboard.html" class="text-muted"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mt-2">
+                <div>
+                    <h2 class="mb-1" id="projectTitle">Loading project…</h2>
+                    <p class="text-muted mb-0" id="projectDescription"></p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge badge-teal align-self-center" id="projectStatus"></span>
+                    <a class="btn btn-outline-teal btn-sm" id="connectionsLink" href="connections.html"><i class="bi bi-plug"></i> Manage connections</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-7">
+                <div class="glass-card mb-4">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs ho-tabs mb-3" role="tablist">
+                            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview">Overview</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#documents">Documents</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tasks">Tasks</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reports">Report</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#onboarding">Onboarding</button></li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="overview">
+                                <div class="row g-3">
+                                    <div class="col-md-5">
+                                        <h6>Readiness</h6>
+                                        <canvas id="readinessChart" height="190" aria-label="Readiness chart" role="img"></canvas>
+                                        <p class="text-center text-muted small mb-0" id="readinessCaption">—</p>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <h6>AI analysis</h6>
+                                        <p class="small" id="analysisSummary">Loading analysis…</p>
+                                        <div id="conflictBox"></div>
+                                        <div id="analysisBadges" class="d-flex flex-wrap gap-2 mt-3"></div>
+                                    </div>
+                                </div>
+                                <hr class="my-4">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-exclamation-triangle text-warning me-1"></i> Risks</h6>
+                                        <ul class="list-unstyled small" id="riskList"></ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-question-circle text-warning me-1"></i> Knowledge gaps</h6>
+                                        <ul class="list-unstyled small" id="gapList"></ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="documents">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <p class="small text-muted mb-0">PDF, DOCX and TXT files are parsed and chunked for the assistant.</p>
+                                    <label class="btn btn-teal btn-sm mb-0">
+                                        <i class="bi bi-upload"></i> Upload document
+                                        <input type="file" id="docFile" accept=".pdf,.docx,.txt" hidden onchange="uploadDocument(this)">
+                                    </label>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table ho-table">
+                                        <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Uploaded</th></tr></thead>
+                                        <tbody id="documentRows"><tr><td colspan="4" class="text-muted">Loading…</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="tasks">
+                                <div class="table-responsive">
+                                    <table class="table ho-table">
+                                        <thead><tr><th>Task</th><th>Status</th><th>Owner</th><th>Due</th><th>Source</th></tr></thead>
+                                        <tbody id="taskRows"><tr><td colspan="5" class="text-muted">Loading…</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="reports">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <p class="small text-muted mb-0">Reports stay <strong>pending</strong> until a manager approves them.</p>
+                                    <button class="btn btn-teal btn-sm" id="generateReportBtn" onclick="generateReport()">
+                                        <i class="bi bi-file-earmark-plus"></i> Generate report
+                                    </button>
+                                </div>
+                                <div id="reportList"><p class="small text-muted">No reports yet.</p></div>
+                            </div>
+
+                            <div class="tab-pane fade" id="onboarding">
+                                <div id="onboardingList"><p class="small text-muted">Loading onboarding plan…</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-5" id="chat">
+                <div class="glass-card chat-container">
+                    <div class="card-body p-0 d-flex flex-column h-100">
+                        <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="border-color:var(--ho-border)!important;">
+                            <div>
+                                <h6 class="mb-0"><i class="bi bi-robot me-2"></i>Project assistant</h6>
+                                <small class="text-muted">Answers only from this project's data</small>
+                            </div>
+                            <span class="badge badge-teal">Scoped</span>
+                        </div>
+                        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+                        <div class="chat-input-area">
+                            <label for="chatInput" class="visually-hidden">Ask a project question</label>
+                            <input type="text" id="chatInput" placeholder="Ask about deadlines, tasks, payments or access…"
+                                   onkeypress="if(event.key==='Enter') sendChat()">
+                            <button class="btn btn-teal" onclick="sendChat()" aria-label="Send question"><i class="bi bi-send"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/chart-config.js"></script>
+    <script>
+        const projectId = getProjectId() || '1';
+        let projectData = null;
+        let reports = [];
+
+        async function loadProject() {
+            currentUser = await checkAuth();
+            if (!currentUser) return;
+            renderUserNav();
+
+            api('/api/system/status').then(s => {
+                const badge = document.getElementById('aiModeBadge');
+                if (badge) badge.innerHTML = `<i class="bi bi-cpu"></i> ${s.mockAi ? 'SIMULATED AI' : 'LIVE AI'}`;
+            }).catch(() => {});
+
+            projectData = await api(`/api/projects/${projectId}`);
+            const p = projectData.project;
+            document.title = `${p.name} - HandOver.AI`;
+            document.getElementById('projectTitle').textContent = p.name;
+            document.getElementById('projectDescription').textContent = p.description || '';
+            document.getElementById('projectStatus').textContent = p.status || 'IN_PROGRESS';
+            document.getElementById('connectionsLink').href = `connections.html?id=${projectId}`;
+
+            renderOverview(projectData);
+            renderDocuments(projectData.documents || []);
+            renderTasks(projectData.tasks || []);
+            await loadReports();
+            await loadOnboarding();
+            await loadChatHistory();
+        }
+
+        function renderOverview(data) {
+            const readiness = data.readiness || {};
+            const score = readiness.readinessScore ?? data.project.readinessScore ?? 0;
+            if (window.readinessChartInstance) window.readinessChartInstance.destroy();
+            window.readinessChartInstance = createReadinessChart('readinessChart', score);
+            document.getElementById('readinessCaption').textContent =
+                `${readiness.missingPercentage ?? (100 - score)}% information missing · ${readiness.itemsNeedingAttention ?? 0} items need attention`;
+
+            const analysis = data.latestAnalysis;
+            document.getElementById('analysisSummary').textContent = analysis?.executiveSummary
+                || 'No AI analysis has been run for this project yet. Sync a connection to generate findings.';
+
+            const conflictBox = document.getElementById('conflictBox');
+            if (analysis?.conflictsSummary) {
+                conflictBox.innerHTML = `<div class="conflict-highlight mt-2">
+                    <strong><i class="bi bi-exclamation-triangle"></i> Conflict detected</strong>
+                    <p class="small mb-0 mt-1">${escapeHtml(analysis.conflictsSummary)}</p>
+                </div>`;
+            }
+
+            const badges = [];
+            if ((data.risks || []).length) badges.push(`<span class="badge badge-blocked">${data.risks.length} open risk${data.risks.length > 1 ? 's' : ''}</span>`);
+            if ((data.knowledgeGaps || []).length) badges.push(`<span class="badge badge-amber">${data.knowledgeGaps.length} knowledge gap${data.knowledgeGaps.length > 1 ? 's' : ''}</span>`);
+            if ((data.decisions || []).length) badges.push(`<span class="badge badge-info">${data.decisions.length} decision${data.decisions.length > 1 ? 's' : ''} recorded</span>`);
+            badges.push('<span class="badge badge-pending">Pending manager approval</span>');
+            document.getElementById('analysisBadges').innerHTML = badges.join('');
+
+            const riskList = document.getElementById('riskList');
+            riskList.innerHTML = (data.risks || []).length
+                ? data.risks.map(r => `<li class="mb-2">${statusBadge(r.severity || 'MEDIUM')} ${escapeHtml(r.description || '')}<br><small class="text-muted">${escapeHtml(r.mitigation || '')}</small></li>`).join('')
+                : '<li class="text-muted">No open risks.</li>';
+
+            const gapList = document.getElementById('gapList');
+            gapList.innerHTML = (data.knowledgeGaps || []).length
+                ? data.knowledgeGaps.map(g => `<li class="mb-2">${escapeHtml(g.description || '')}<br><small class="text-muted">Source needed: ${escapeHtml(g.suggestedSource || g.status || 'Unknown')}</small></li>`).join('')
+                : '<li class="text-muted">No knowledge gaps.</li>';
+        }
+
+        function renderDocuments(docs) {
+            const rows = document.getElementById('documentRows');
+            if (!docs.length) {
+                rows.innerHTML = '<tr><td colspan="4" class="text-muted">No documents uploaded yet.</td></tr>';
+                return;
+            }
+            rows.innerHTML = docs.map(d => `<tr>
+                <td>${escapeHtml(d.fileName)}</td>
+                <td><span class="badge badge-info">${escapeHtml(d.fileType || 'FILE')}</span></td>
+                <td>${formatBytes(d.fileSize)}</td>
+                <td>${formatDate(d.uploadedAt)}</td>
+            </tr>`).join('');
+        }
+
+        function renderTasks(tasks) {
+            const rows = document.getElementById('taskRows');
+            if (!tasks.length) {
+                rows.innerHTML = '<tr><td colspan="5" class="text-muted">No tasks synced yet.</td></tr>';
+                return;
+            }
+            rows.innerHTML = tasks.map(t => `<tr>
+                <td>${escapeHtml(t.title)}</td>
+                <td>${statusBadge(t.status)}${t.overdue ? ' <span class="badge badge-overdue">OVERDUE</span>' : ''}${t.unowned ? ' <span class="badge badge-amber">NO OWNER</span>' : ''}</td>
+                <td>${escapeHtml(t.owner || '—')}</td>
+                <td>${formatDate(t.deadline)}</td>
+                <td>${t.sourceUrl ? `<a href="${escapeHtml(t.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : '—'}</td>
+            </tr>`).join('');
+        }
+
+        async function loadReports() {
+            reports = await api(`/api/projects/${projectId}/reports`).catch(() => []);
+            const el = document.getElementById('reportList');
+            if (!reports.length) {
+                el.innerHTML = '<p class="small text-muted">No reports yet. Generate one when the project is ready for review.</p>';
+                return;
+            }
+            const canReview = ['ROLE_MANAGER', 'ROLE_ADMIN'].includes(currentUser.role);
+            el.innerHTML = reports.map(r => {
+                const statusCls = r.status === 'APPROVED' ? 'badge-approved'
+                    : r.status === 'REJECTED' ? 'badge-overdue' : 'badge-pending';
+                return `<div class="glass-card-sm p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                        <div>
+                            <strong>Handover report ${escapeHtml(r.version || '')}</strong>
+                            <div class="small text-muted">Generated ${formatDateTime(r.generatedAt)}</div>
+                        </div>
+                        <span class="badge ${statusCls}">${escapeHtml((r.status || '').replace('_', ' '))}</span>
+                    </div>
+                    <p class="small mt-2 mb-2">${escapeHtml(r.executiveSummary || '')}</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-teal" href="/api/projects/${projectId}/reports/${r.id}/download">
+                            <i class="bi bi-download"></i> PDF
+                        </a>
+                        ${canReview && r.status === 'PENDING_APPROVAL' ? `
+                            <button class="btn btn-sm btn-teal" onclick="reviewReport(${r.id}, 'APPROVED')"><i class="bi bi-check2"></i> Approve</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="reviewReport(${r.id}, 'REJECTED')"><i class="bi bi-x"></i> Reject</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function generateReport() {
+            const btn = document.getElementById('generateReportBtn');
+            btn.disabled = true;
+            try {
+                await api(`/api/projects/${projectId}/reports/generate`, { method: 'POST' });
+                showToast('Report generated and sent for manager approval', 'success');
+                await loadReports();
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function reviewReport(reportId, decision) {
+            let comments = '';
+            if (decision === 'REJECTED') {
+                comments = prompt('Why is this report being rejected?') || '';
+                if (!comments) return;
+            }
+            try {
+                await api(`/api/projects/${projectId}/reports/${reportId}/approve`, {
+                    method: 'POST', body: { decision, comments }
+                });
+                showToast(`Report ${decision.toLowerCase()}`, decision === 'APPROVED' ? 'success' : 'warning');
+                await loadReports();
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            }
+        }
+
+        async function loadOnboarding() {
+            const el = document.getElementById('onboardingList');
+            try {
+                const view = await api(`/api/projects/${projectId}/incoming-view`);
+                const plans = view.onboardingPlans || [];
+                const access = view.accessItems || [];
+                let html = '';
+                if (view.approvedReport) {
+                    html += '<div class="alert alert-success py-2 small">Handover approved by manager — ready for the incoming employee.</div>';
+                } else {
+                    html += '<div class="alert alert-warning py-2 small">Pending manager approval — this plan is not yet shared with the incoming employee.</div>';
+                }
+                html += '<div class="stepper mb-4">';
+                html += plans.length ? plans.map((plan, i) => `
+                    <div class="stepper-item ${i === 0 ? 'completed' : ''}">
+                        <h6>${escapeHtml((plan.phase || '').replace('_', ' '))} · ${escapeHtml(plan.title || '')}</h6>
+                        <p>${escapeHtml(plan.description || '')}</p>
+                    </div>`).join('')
+                    : '<p class="small text-muted">No onboarding plan generated yet.</p>';
+                html += '</div>';
+                html += '<h6>Access inventory</h6>';
+                html += access.length ? `<div class="table-responsive"><table class="table ho-table">
+                    <thead><tr><th>System</th><th>Account</th><th>Role</th><th>Transfer status</th></tr></thead>
+                    <tbody>${access.map(a => `<tr>
+                        <td>${escapeHtml(a.systemName || '')}</td>
+                        <td>${escapeHtml(a.accountMasked || '')}</td>
+                        <td>${escapeHtml(a.accessLevel || '')}</td>
+                        <td>${statusBadge(a.transferStatus)}</td>
+                    </tr>`).join('')}</tbody></table></div>`
+                    : '<p class="small text-muted">No access items recorded.</p>';
+                el.innerHTML = html;
+            } catch (e) {
+                el.innerHTML = `<p class="small text-muted">Could not load onboarding plan: ${escapeHtml(errorText(e))}</p>`;
+            }
+        }
+
+        async function uploadDocument(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            const form = new FormData();
+            form.append('file', file);
+            showToast(`Uploading ${file.name}…`, 'info');
+            try {
+                await api(`/api/projects/${projectId}/documents`, { method: 'POST', body: form });
+                showToast('Document uploaded and indexed', 'success');
+                const data = await api(`/api/projects/${projectId}`);
+                projectData = data;
+                renderDocuments(data.documents || []);
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            } finally {
+                input.value = '';
+            }
+        }
+
+        /* ---------- Chat ---------- */
+        async function loadChatHistory() {
+            const history = await api(`/api/projects/${projectId}/chat`).catch(() => []);
+            const el = document.getElementById('chatMessages');
+            el.innerHTML = `<div class="chat-bubble ai">Hello${currentUser.name ? ', ' + escapeHtml(currentUser.name.split(' ')[0]) : ''}! I answer only from this project's documents and synced work items. Try “What is the renewal deadline?” or “What is missing?”.</div>`;
+            history.forEach(m => appendChatMessage(m.aiResponse, parseCitations(m.citationsJson), m.id, m.flaggedWrong));
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function parseCitations(raw) {
+            if (!raw) return [];
+            try {
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                return Array.isArray(parsed) ? parsed : [];
+            } catch { return []; }
+        }
+
+        function appendChatMessage(text, citations, messageId, flagged) {
+            const el = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'chat-bubble ai' + (flagged ? ' flagged' : '');
+            const safe = escapeHtml(text || '').replace(/\n/g, '<br>');
+            let html = safe;
+            if (citations && citations.length) {
+                html += '<br><small class="text-muted d-block mt-2">Sources</small>';
+                citations.forEach(c => {
+                    const label = [c.source, c.pageOrSection || c.section].filter(Boolean).join(' · ');
+                    html += `<span class="citation" title="Verified project source">${escapeHtml(label)}</span>`;
+                });
+            }
+            if (messageId) {
+                html += `<button class="flag-btn" title="Flag this answer as wrong" onclick="flagAnswer(${messageId}, this)"><i class="bi bi-flag"></i></button>`;
+            }
+            div.innerHTML = html;
+            el.appendChild(div);
+            el.scrollTop = el.scrollHeight;
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const query = input.value.trim();
+            if (!query) return;
+            const el = document.getElementById('chatMessages');
+            const userBubble = document.createElement('div');
+            userBubble.className = 'chat-bubble user';
+            userBubble.textContent = query;
+            el.appendChild(userBubble);
+            input.value = '';
+            el.scrollTop = el.scrollHeight;
+
+            const thinking = document.createElement('div');
+            thinking.className = 'chat-bubble ai text-muted';
+            thinking.textContent = 'Checking project evidence…';
+            el.appendChild(thinking);
+            el.scrollTop = el.scrollHeight;
+
+            try {
+                const res = await api(`/api/projects/${projectId}/chat`, { method: 'POST', body: { query } });
+                thinking.remove();
+                const isIrrelevant = res.response === 'its irrelevant';
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble ai' + (isIrrelevant ? ' irrelevant' : '');
+                let html = escapeHtml(res.response || '').replace(/\n/g, '<br>');
+                if (res.citations && res.citations.length) {
+                    html += '<br><small class="text-muted d-block mt-2">Sources</small>';
+                    res.citations.forEach(c => {
+                        const label = [c.source, c.pageOrSection || c.section].filter(Boolean).join(' · ');
+                        html += `<span class="citation">${escapeHtml(label)}</span>`;
+                    });
+                }
+                if (res.id) {
+                    html += `<button class="flag-btn" title="Flag this answer as wrong" onclick="flagAnswer(${res.id}, this)"><i class="bi bi-flag"></i></button>`;
+                }
+                bubble.innerHTML = html;
+                el.appendChild(bubble);
+            } catch (e) {
+                thinking.remove();
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble ai';
+                bubble.textContent = 'Could not answer: ' + errorText(e);
+                el.appendChild(bubble);
+            }
+            el.scrollTop = el.scrollHeight;
+        }
+
+        async function flagAnswer(messageId, btn) {
+            const reason = prompt('What is wrong with this answer?', 'Incorrect or unsupported claim');
+            if (reason === null) return;
+            try {
+                await api(`/api/projects/${projectId}/chat/${messageId}/flag`, {
+                    method: 'POST', body: { reason }
+                });
+                btn.closest('.chat-bubble').classList.add('flagged');
+                showToast('Answer flagged for manager review', 'warning');
+            } catch (e) {
+                showToast(errorText(e), 'error');
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '—';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        initTheme();
+        loadProject().catch(e => showToast(errorText(e), 'error'));
+    </script>
+</body>
+</html>

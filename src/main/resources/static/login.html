@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - HandOver.AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body class="animated-bg">
+    <canvas id="bg3d" aria-hidden="true"></canvas>
+    <div class="login-wrapper">
+        <div class="glass-card login-card">
+            <div class="text-center mb-4">
+                <h2 class="fw-800">HandOver<span class="text-brand">.AI</span></h2>
+                <p class="text-muted mb-0">Sign in to continue</p>
+            </div>
+
+            <div id="loginStep1">
+                <div class="mb-3">
+                    <label class="form-label" for="loginEmail">Email</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="you@example.com" autocomplete="username">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="loginPassword">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="Enter password"
+                           autocomplete="current-password" onkeypress="if(event.key==='Enter') doPasswordLogin()">
+                </div>
+                <button class="btn btn-teal w-100 mb-3" id="passwordLoginBtn" onclick="doPasswordLogin()">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Login with Password
+                </button>
+                <button class="btn btn-outline-teal w-100" onclick="showFaceLogin()">
+                    <i class="bi bi-person-bounding-box me-1"></i> Login with Face Recognition
+                </button>
+
+                <hr class="my-4">
+                <p class="small text-muted mb-2">Demo accounts</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-sm btn-outline-secondary text-start" onclick="fillDemo('outgoing@handoverai.com','Outgoing@12345')">
+                        <i class="bi bi-person-workspace me-1"></i> Outgoing owner
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary text-start" onclick="fillDemo('incoming@handoverai.com','Incoming@12345')">
+                        <i class="bi bi-person-check me-1"></i> Incoming successor
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary text-start" onclick="fillDemo('manager@handoverai.com','Manager@12345')">
+                        <i class="bi bi-person-badge me-1"></i> Manager
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary text-start" onclick="fillDemo('admin@handoverai.com','Admin@123456789')">
+                        <i class="bi bi-shield-lock me-1"></i> Admin
+                    </button>
+                </div>
+            </div>
+
+            <div id="faceLoginStep" style="display:none;">
+                <div class="text-center mb-3">
+                    <video id="video" width="300" height="225" autoplay muted playsinline style="border-radius:8px;background:#000;max-width:100%;"></video>
+                    <canvas id="canvas" style="display:none;"></canvas>
+                    <p class="text-muted small mt-2 mb-0" id="faceStatus">
+                        Face recognition needs HTTPS or localhost for camera access.
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="faceEmail">Account email</label>
+                    <input type="email" class="form-control" id="faceEmail" placeholder="you@example.com" autocomplete="username">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="facePassword">Password (second factor)</label>
+                    <input type="password" class="form-control" id="facePassword" placeholder="Enter password" autocomplete="current-password">
+                </div>
+                <button class="btn btn-teal w-100 mb-2" id="verifyFaceBtn" onclick="captureFace()">
+                    <i class="bi bi-camera me-1"></i> Verify Face
+                </button>
+                <button class="btn btn-outline-secondary w-100 mb-2" onclick="demoFaceLogin()">
+                    <i class="bi bi-magic me-1"></i> Use seeded demo face (no camera)
+                </button>
+                <button class="btn btn-outline-secondary w-100" onclick="backToLogin()">Back to Password Login</button>
+                <p class="small text-muted mt-3 mb-0">
+                    Face login requires your password plus an enrolled face. Enrol or re-capture your face in <strong>Profile</strong>.
+                </p>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="signup.html" class="text-brand">Don't have an account? Sign up</a>
+            </div>
+            <div class="text-center mt-2">
+                <a href="index.html" class="text-muted small"><i class="bi bi-arrow-left"></i> Back to Home</a>
+            </div>
+            <div class="text-center mt-2">
+                <button class="btn btn-link btn-sm text-muted p-0" data-motion-toggle onclick="toggleBackgroundMotion()" aria-pressed="true">
+                    <i class="bi bi-pause-circle me-1"></i> Pause background
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/bg3d.js"></script>
+    <script>
+        initTheme();
+        ensureCsrf();
+
+        const FACE_MODELS_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+        let stream = null;
+        let modelsReady = false;
+
+        function fillDemo(email, password) {
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = password;
+        }
+
+        async function doPasswordLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) { showToast('Enter your email and password.', 'warning'); return; }
+
+            const btn = document.getElementById('passwordLoginBtn');
+            btn.disabled = true;
+            try {
+                await api('/api/auth/login', { method: 'POST', body: { email, password } });
+                showToast('Login successful', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 400);
+            } catch (e) {
+                showToast(errorText(e), 'error');
+                btn.disabled = false;
+            }
+        }
+
+        async function showFaceLogin() {
+            document.getElementById('loginStep1').style.display = 'none';
+            document.getElementById('faceLoginStep').style.display = 'block';
+            document.getElementById('faceEmail').value = document.getElementById('loginEmail').value.trim();
+            document.getElementById('facePassword').value = document.getElementById('loginPassword').value;
+
+            const status = document.getElementById('faceStatus');
+            try {
+                if (!modelsReady) {
+                    status.textContent = 'Loading face models…';
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODELS_URL),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS_URL)
+                    ]);
+                    modelsReady = true;
+                }
+                status.textContent = 'Starting camera…';
+                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 225 }, audio: false });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                await video.play();
+                status.textContent = 'Camera ready. Look straight at the camera, then press Verify Face.';
+            } catch (e) {
+                status.textContent = 'Camera or face models unavailable. Use password login instead.';
+                showToast('Could not start face login: ' + errorText(e), 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+        }
+
+        function backToLogin() {
+            stopCamera();
+            document.getElementById('loginStep1').style.display = 'block';
+            document.getElementById('faceLoginStep').style.display = 'none';
+        }
+
+        function eyeAspectRatio(points) {
+            const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+            const v1 = dist(points[1], points[5]);
+            const v2 = dist(points[2], points[4]);
+            const h = dist(points[0], points[3]);
+            return h === 0 ? 0 : (v1 + v2) / (2 * h);
+        }
+
+        async function waitForBlink(video, timeoutMs = 10000) {
+            const started = performance.now();
+            let eyesOpen = false;
+            while (performance.now() - started < timeoutMs) {
+                const detection = await faceapi
+                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                    .withFaceLandmarks();
+                if (detection) {
+                    const left = eyeAspectRatio(detection.landmarks.getLeftEye());
+                    const right = eyeAspectRatio(detection.landmarks.getRightEye());
+                    const ear = (left + right) / 2;
+                    if (ear > 0.25) eyesOpen = true;
+                    if (eyesOpen && ear < 0.20) return true;
+                }
+                await new Promise(resolve => setTimeout(resolve, 120));
+            }
+            return false;
+        }
+
+        async function demoFaceLogin() {
+            const email = document.getElementById('faceEmail').value.trim();
+            const password = document.getElementById('facePassword').value;
+            if (!email || !password) { showToast('Enter your email and password first.', 'warning'); return; }
+
+            const status = document.getElementById('faceStatus');
+            status.textContent = 'Using the seeded synthetic demo face profile…';
+            try {
+                const embedding = new Array(128).fill(0);
+                const res = await api('/api/auth/face/verify', { method: 'POST', body: { email, password, embedding } });
+                if (res && res.verified) {
+                    stopCamera();
+                    status.textContent = 'Demo face profile verified. Signing you in…';
+                    showToast('Password and demo face verified', 'success');
+                    setTimeout(() => window.location.href = 'dashboard.html', 500);
+                }
+            } catch (e) {
+                status.textContent = errorText(e) + ' Re-capture your face in Profile if you have enrolled a real face.';
+                showToast(errorText(e), 'error');
+            }
+        }
+
+        async function captureFace() {
+            const email = document.getElementById('faceEmail').value.trim();
+            const password = document.getElementById('facePassword').value;
+            if (!email || !password) { showToast('Enter your email and password first.', 'warning'); return; }
+            if (!modelsReady) { showToast('Face models are still loading.', 'warning'); return; }
+
+            const btn = document.getElementById('verifyFaceBtn');
+            const status = document.getElementById('faceStatus');
+            btn.disabled = true;
+            try {
+                status.textContent = 'Liveness check: please blink once naturally…';
+                const blinked = await waitForBlink(document.getElementById('video'));
+                if (!blinked) {
+                    status.textContent = 'Liveness check failed. Improve lighting, look at the camera and blink, then try again.';
+                    showToast('Liveness check failed. Try again or use password login.', 'warning');
+                    return;
+                }
+
+                status.textContent = 'Liveness confirmed. Matching your face…';
+                const detection = await faceapi
+                    .detectSingleFace('video', new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                if (!detection) {
+                    status.textContent = 'No face detected. Improve lighting and look directly at the camera.';
+                    showToast('No face detected. Try again.', 'warning');
+                    return;
+                }
+
+                const embedding = Array.from(detection.descriptor);
+                const res = await api('/api/auth/face/verify', { method: 'POST', body: { email, password, embedding } });
+                if (res && res.verified) {
+                    stopCamera();
+                    status.textContent = 'Face verified. Signing you in…';
+                    showToast('Password and face verified', 'success');
+                    setTimeout(() => window.location.href = 'dashboard.html', 500);
+                } else {
+                    status.textContent = 'Face did not match the enrolled profile.';
+                }
+            } catch (e) {
+                status.textContent = errorText(e);
+                showToast(errorText(e), 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Show a friendly notice when redirected here by logout.
+        if (new URLSearchParams(window.location.search).get('logout') === 'true') {
+            showToast('You have been signed out.', 'info');
+        }
+    </script>
+</body>
+</html>
